@@ -9,22 +9,26 @@
 
 library(shiny)
 library(shinydashboard)
-library(shinydashboardPlus)
-library(formattable)
+# library(shinydashboardPlus)
+# library(formattable)
+
+source("./ui/playlist_summary.R")
 
 # Define UI for application that draws a histogram
 dashboardPage(
-  dashboardHeader(title = "DJ Helper"),
+  dashboardHeader(title = "DJ Helper 0.1"),
   dashboardSidebar(
-    selectInput(inputId = "users_list", label = "Select your spotify List", 
-                choices = unique(playlists$playlist_name), multiple = F)
-  ),
+    selectInput(inputId = "all_users_list_names", label = "Select your spotify List", 
+                choices = unique(playlists), multiple = F, selected = "Salsa"),
+    sidebarMenu(
+      menuItem("Playlist Summary",
+               tabName = "pl_summary",
+               selected = TRUE,
+               newtab = TRUE)
+  )),
   dashboardBody(
-    fluidPage(
-      fluidRow(
-               infoBox(title = "Number of Songs", value = nrow(processed)),
-               infoBox(title = "Distribution", value = speed2duration)
-               )
-      )
+    tabItems(
+      ui_playlist_summary
     )
   )
+)
