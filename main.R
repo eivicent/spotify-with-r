@@ -11,8 +11,10 @@ access_token <- get_spotify_access_token()
 
 auth <- get_spotify_authorization_code()
 
-user <- "eivicent"
 
+#victor l. user <- "1255408767" 
+
+user <- "eivicent"
 
 playlists <- list()
 for(ii in 1:10){
@@ -22,17 +24,55 @@ for(ii in 1:10){
 playlists <- bind_rows(playlists) %>% arrange(tracks.total)
 
 
-playlist.selected <- filter(playlists, name == "SPGym_Latin_Selection") %>% select(id)
+playlist.selected <- filter(playlists, name == "Jazzy Mix") %>% select(id)
 
-songs <- get_playlist(playlist.selected, fields = "tracks.items") 
-%>%
-  bind_rows()
+songs <- get_playlist(playlist.selected, fields = "tracks.items(track(name, id, artists)),")
 
-get_track_audio_features(songs$track.id[1])
+songs.info <- songs$tracks$items
+songs.info$artist <- sapply(lapply(songs$tracks$items$track.artists, function(x) x$name), function(x) x[1])
+
+songs.info <- songs.info %>% select(name = track.name, id = track.id, artist)
+
+features <- get_track_audio_features(songs.info$id) %>%
+  mutate(duration = duration_ms/(60*1000)) %>%
+  select(-c(uri:analysis_url), -duration_ms, -type, -time_signature)
 
 
-songs_features <- get_track_audio_features(songs$tracks$items$track.id)
-songs_popularity <- get_track_popularity(songs)
+total_info <- songs.info %>% left_join(features, by = "id")
 
-songs_total <- songs %>% inner_join(
-  inner_join(songs_features, songs_popularity))
+### VALENCE IS FOR POSITIVENESS
+### ENERGY IS FOR INTENSITY
+### DANCEABILITY IS FOR DANCING
+### TEMPO IS BEATS PER MINUTE
+### KEY/MODE
+
+classify_track_sentiment <- function(valence, energy) {
+  if (is.na(valence) | is.na(energy)) {
+    return(NA)
+  }
+  else if (valence >= .5) {
+    if (energy >= .5) {
+      return('Happy/Joyful')
+    } else {
+      return('Chill/Peaceful')
+    }
+  } else {
+    if (energy >= .5) {
+      return('Turbulent/Angry')
+    } else {
+      return('Sad/Depressing')
+    }
+  }
+}
+
+
+
+aux <- total_info %>% 
+  rowwise %>%
+  mutate(sentiment = classify_track_sentiment(valence,energy)) %>%
+  ungroup
+
+
+
+
+
