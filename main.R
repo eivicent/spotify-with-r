@@ -24,7 +24,7 @@ for(ii in 1:10){
 playlists <- bind_rows(playlists) %>% arrange(tracks.total)
 
 
-playlist.selected <- filter(playlists, name == "Jazzy Mix") %>% select(id)
+playlist.selected <- filter(playlists, name == "SPGym_Latin_Selection") %>% select(id)
 
 songs <- get_playlist(playlist.selected, fields = "tracks.items(track(name, id, artists)),")
 
@@ -65,14 +65,34 @@ classify_track_sentiment <- function(valence, energy) {
   }
 }
 
+classify_duration <- function(duration){
+  output <- case_when(
+    between(duration, 0,2.5) ~ "Short",
+    between(duration, 2.5,4) ~ "Normal",
+    between(duration, 4,5.5) ~ "Long",
+    between(duration, 5,Inf) ~ "Eternal")
+  return(output)
+}
+
+classify_tempo_swing <- function(tempo){
+  output <- case_when(
+    between(tempo, 0,120) ~ "SuperSlow",
+    between(tempo, 120,140) ~ "Slow",
+    between(tempo, 140,160) ~ "Normal",
+    between(tempo, 160,190) ~ "Fast",
+    between(tempo, 190,Inf) ~ "SuperFast")
+  return(output)
+}
 
 
-aux <- total_info %>% 
+final_info <- total_info %>% 
   rowwise %>%
   mutate(sentiment = classify_track_sentiment(valence,energy)) %>%
+  mutate(duration_group = classify_duration(duration)) %>%
+  mutate(tempo_swing = classify_tempo_swing(tempo)) %>%
   ungroup
 
 
 
-
-
+ggplot(total_info, aes(x = duration, y = tempo)) +
+  geom_point(aes(colour = name))

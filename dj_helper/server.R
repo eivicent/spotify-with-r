@@ -1,60 +1,84 @@
-#
-# This is the server logic of a Shiny web application. You can run the 
-# application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-# 
-#    http://shiny.rstudio.com/
-#
-
-library(shiny)
-source("./ui/playlist_summary.R")
-# Define server logic required to draw a histogram
-shinyServer(function(input,output) {
+shinyServer(function(input, output, session) {
   
+  spotify_access_token <- reactive({
+    get_spotify_access_token()
+  })
   
-  output$pl_summary_nsongs <- renderInfoBox({
-    infoBox("Number of Songs",
-      nrow(songs_total))
-    })
 
-  output$pl_summary_totduration <- renderInfoBox({
-    infoBox("Number of Songs",
-      sum(songs_total$duration_ms/(1000*60)))
-    })
-
-  output$pl_summary_avgpopularity <- renderInfoBox({
-    infoBox("Number of Songs",
-      mean(songs_total$track_popularity,na.rm = T))
+    output$selected_playlist_info <- renderUI({
+      tagList(
+        textOutput('playlist_num_tracks'),
+        htmlOutput('playlist_img'),
+        br()
+      )
     })
    
-  # observeEvent(input$users_list, {
-  #   # test <- get_playlist_tracks(playlists %>% filter(playlist_name == input$users_list))
-  #   # output <- get_track_audio_features(test)
-  #   test <- songs
-  #   output <- songs_features
-  #   processed <- output %>% 
-  #     inner_join(test, by = "track_uri") %>% 
-  #     mutate(duration = duration_ms/(1000*60),
-  #            duration_grups = cut(duration,  breaks = c(0,3,5,7,Inf), labels = c("Short", "Normal", "Long", "Super Long")),
-  #            tempo_grups = cut(tempo, breaks = c(0,70,90,100,120,Inf), labels = c("Super Slow","Slow", "Normal", "Fast", "Super Fast")),
-  #            instrumental_grups = cut(instrumentalness, breaks = c(-Inf,0.2,0.5,0.75,Inf), labels = c("Vocal", "Vocal+Instru", "Instrumentalish", "Instrumental")),
-  #            energy_grups = cut(energy, breaks = c(0,0.6,1), labels = c("EA", "EB")),
-  #            valence_grups = cut(valence, breaks = c(0,0.4, 0.6, 1), labels = c("VA", "VB", "VC")),
-  #            dance_grups = cut(danceability, breaks = c(-Inf,0.4, 0.6,0.8,Inf), labels = c("DA","DB","DC","DD"))) %>%
-  #     select(-track_uri, -key_mode, -time_signature, -key, -loudness, -acousticness, -speechiness, -liveness)
-  #   return(processed)
+    selected_playlist <- reactive({
+      list_of_playlists %>% 
+        filter(name == input$select_playlist)
+    })
+    
+    
+    observeEvent(input$select_playlist, {
+      playlist_img <- ifelse(!is.na(selected_playlist()$images[[1]]$url[1]), 
+                           selected_playlist()$images[[1]]$url[1], 
+                           'https://pbs.twimg.com/profile_images/509949472139669504/IQSh7By1_400x400.jpeg')
+      
+      output$playlist_img <- renderText({
+        HTML(str_glue('<img src={playlist_img} height="200">'))
+      })
+      
+      output$playlist_num_tracks <- renderText({
+        selected_playlist()$tracks.total
+      })
+      
+    })
+  # 
+  # artist_audio_features <- eventReactive(input$tracks_go, {
+  #   df <- get_artist_audio_features(selected_artist()$name, authorization = spotify_access_token()) %>% 
+  #     mutate(album_img = map_chr(1:nrow(.), function(row) {
+  #       .$album_images[[row]]$url[1]
+  #     }))
+  #   if (nrow(df) == 0) {
+  #     stop("Sorry, couldn't find any tracks for that artist's albums on Spotify.")
+  #   }
+  #   return(df)
+  # })
+  # 
+  # output$artist_quadrant_chart <- renderHighchart({
+  #   artist_quadrant_chart(artist_audio_features()) %>% 
+  #     hc_add_event_point(event = 'mouseOver')
+  # })
+  # 
+  # output$artist_chart_song_ui <- renderUI({
+  #   
+  #   req(input$artist_quadrant_chart_mouseOver, input$artist_autoplay == TRUE)
+  #   
+  #   artist_track_hover <- input$artist_quadrant_chart_mouseOver
+  #   track_preview_url <- artist_audio_features() %>% filter(
+  #     album_name == artist_track_hover$series,
+  #     valence == artist_track_hover$x,
+  #     energy == artist_track_hover$y
+  #   ) %>% pull(track_preview_url)
+  #   
+  #   if (!is.na(track_preview_url)) {
+  #     tagList(
+  #       tags$audio(id = 'song_preview', src = track_preview_url, type = 'audio/mp3', autoplay = NA, controls = NA),
+  #       tags$script(JS("myAudio=document.getElementById('song_preview'); myAudio.play();"))
+  #     )
+  #   } else {
+  #     h5('No preview for this track on Spotify')
+  #   }
+  # })
+  # 
+  # observeEvent(input$tracks_go, {
+  #   output$artist_plot <- renderUI({
+  #     if (input$GetScreenWidth >= 800) {
+  #       withSpinner(highchartOutput('artist_quadrant_chart', width = '820px', height = '800px'), type = 5, color = '#1ed760')
+  #     } else {
+  #       withSpinner(highchartOutput('artist_quadrant_chart'), type = 5, color = '#1ed760')
+  #     }
+  #   })
   # })
   
-  # observeEvent(input$users_list,{
-    # speed2duration <- count(processed, duration_grups, tempo_grups) %>% spread(tempo_grups, n)
-  # })
-
 })
-
-
-# upsi <- processed %>% count(mode)
-# 
-# vocal <- count(processed, instrumental_grups)
-# processed %>% count(energy_grups, valence_grups) %>% spread(valence_grups, n)
-# processed %>% count(dance_grups) %>% spread(dance_grups, n)
