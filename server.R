@@ -34,16 +34,28 @@ shinyServer(function(input, output, session) {
       
     })
   # 
-  # artist_audio_features <- eventReactive(input$tracks_go, {
-  #   df <- get_artist_audio_features(selected_artist()$name, authorization = spotify_access_token()) %>% 
-  #     mutate(album_img = map_chr(1:nrow(.), function(row) {
-  #       .$album_images[[row]]$url[1]
-  #     }))
-  #   if (nrow(df) == 0) {
-  #     stop("Sorry, couldn't find any tracks for that artist's albums on Spotify.")
-  #   }
-  #   return(df)
-  # })
+    
+  playlist_audio_features <- eventReactive(input$select_playlist, {
+    # 74IYLj2nChgN9S7Es6LWqJ
+    songs <- get_playlist(selected_playlist()$id, fields = "tracks.items(track(name, id, artists)),")
+    songs.info <- songs$tracks$items
+    songs.info$artist <- sapply(lapply(songs$tracks$items$track.artists, function(x) x$name), function(x) x[1])
+    
+    features <- get_track_audio_features(songs.info$track.id) %>%
+      mutate(duration = duration_ms/(60*1000)) %>%
+      select(-c(uri:analysis_url), -duration_ms, -type, -time_signature)
+    
+    
+    total_info <-  songs.info %>% left_join(features, by = c("track.id" = "id"))
+    
+    df <-  total_info %>% 
+      rowwise %>%
+      mutate(sentiment = classify_track_sentiment(valence,energy)) %>%
+      mutate(duration_group = classify_duration(duration)) %>%
+      mutate(tempo_swing = classify_tempo_swing(tempo)) %>%
+      ungroup
+    return(df)
+  })
   # 
   # output$artist_quadrant_chart <- renderHighchart({
   #   artist_quadrant_chart(artist_audio_features()) %>% 
@@ -71,14 +83,13 @@ shinyServer(function(input, output, session) {
   #   }
   # })
   # 
-  # observeEvent(input$tracks_go, {
-  #   output$artist_plot <- renderUI({
-  #     if (input$GetScreenWidth >= 800) {
-  #       withSpinner(highchartOutput('artist_quadrant_chart', width = '820px', height = '800px'), type = 5, color = '#1ed760')
-  #     } else {
-  #       withSpinner(highchartOutput('artist_quadrant_chart'), type = 5, color = '#1ed760')
-  #     }
-  #   })
-  # })
+  observeEvent(input$select_playlist, {
+    output$playlist_plot <- renderPlot({
+      aux <- playlist_audio_features()
+      ggplot(aux, aes(x = duration, y = tempo)) +
+        geom_point(aes(colour = track.name))
+      
+    })
+  })
   
 })

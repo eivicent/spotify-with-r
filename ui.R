@@ -5,37 +5,8 @@
 # Find out more about building applications with Shiny here:
 # 
 #    http://shiny.rstudio.com/
-#
-
-library(shiny)
-library(shinydashboard)
-library(httr)
-library(shiny)
-library(shinyjs)
-library(shinyBS)
-library(tidyverse)
-library(shinymaterial)
-library(tibble)
-library(highcharter)
-library(RColorBrewer)
-library(shinycssloaders)
-library(htmltools)
-library(lubridate)
-library(lazyeval)
-library(spotifyr)
-library(shinydashboardPlus)
-library(formattable)
 
 
-
-playlists <- list()
-for(ii in 1:100){
-  playlists[[ii]] <- get_user_playlists("eivicent", limit = 50, offset = 50*(ii-1))
-  if(is.null(nrow(playlists[[ii]]))){break}
-}
-list_of_playlists <- bind_rows(playlists)
-
-# Define UI for application that draws a histogram
 function(request) {
   material_page(
     # title = HTML('<span>Sentify</span> <span style="font-size:12px"><a href="http://www.rcharlie.com" target="_blank">by RCharlie</a></span>'),
@@ -63,11 +34,11 @@ function(request) {
                       
                       ## SHOW INFO
                        uiOutput('selected_playlist_info')
-                    )
-                  ),
+                    ),
                   material_column(
-                    width = 9
-                    # ,uiOutput('artist_plot')
+                    width = 9,
+                    plotOutput('playlist_plot')
                   )
                 )
+  )
 }
